@@ -1,21 +1,25 @@
 module Main where
 
 import Header
-import Html            exposing (Html, div, span, button, text)
-import Html.Events     exposing (onClick)
-import Signal          exposing (Address)
-import StartApp.Simple exposing (start)
+import Html        exposing (Html, div, span, button, text)
+import Html.Events exposing (onClick)
+import Signal      exposing (Address)
+import Effects     exposing (Effects, Never)
+import StartApp    exposing (start)
 
 
 -- MAIN
 
 
-main = start
-  { model  = init
+app = start
+  { init  = init
   , update = update
   , view   = view
+  , inputs = []
   }
 
+main =
+  app.html
 
 -- MODEL
 
@@ -26,11 +30,12 @@ type alias Model =
   }
 
 
-init : Model
+init : (Model, Effects Action)
 init =
-  Model (Header.Model [{ caption = "Page 1" }
+  ( Model (Header.Model [{ caption = "Page 1" }
                       ,{ caption = "Page Deux" }] 1) 10
-
+  , Effects.none
+  )
 
 -- ACTION
 
@@ -56,9 +61,9 @@ view address model =
 -- UPDATE
 
 
-update : Action -> Model -> Model
+update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
-    Increment -> { model | count = model.count + 1 }
-    Decrement -> { model | count = model.count - 1 }
-    Header headerAction -> { model | header = Header.update headerAction model.header }
+    Increment -> ({ model | count = model.count + 1 }, Effects.none)
+    Decrement -> ({ model | count = model.count - 1 }, Effects.none)
+    Header headerAction -> ({ model | header = Header.update headerAction model.header }, Effects.none)
