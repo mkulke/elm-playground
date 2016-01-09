@@ -7,11 +7,17 @@ import Signal          exposing (Address)
 import StartApp.Simple exposing (start)
 
 
+-- MAIN
+
+
 main = start
   { model  = init
   , update = update
   , view   = view
   }
+
+
+-- MODEL
 
 
 type alias Model =
@@ -26,9 +32,15 @@ init =
                       ,{ caption = "Page Deux" }] 1) 10
 
 
+-- ACTION
+
+
 type Action = Increment
             | Decrement
             | Header Header.Action
+
+
+-- VIEW
 
 
 view : Address Action -> Model -> Html
@@ -39,6 +51,9 @@ view address model =
     , span [] [ text (toString model.count) ]
     , button [ onClick address Increment ] [ text "+" ]
     ]
+
+
+-- UPDATE
 
 
 update : Action -> Model -> Model
