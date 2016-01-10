@@ -14,7 +14,7 @@ type alias Page = { caption : String }
 
 type alias Model =
   { pages       : List Page
-  , activeIndex : Int
+  , active : Int
   }
 
 
@@ -34,8 +34,12 @@ type Action = SetActive Int
 
 update : Action -> Model -> Model
 update action model =
-  case action of
-    SetActive index -> { model | activeIndex = index }
+  let
+    sanitize = \index ->
+      if List.length model.pages > index && index >= 0 then index else 0
+  in
+    case action of
+      SetActive index -> { model | active = (sanitize index) }
 
 
 -- VIEW
@@ -44,7 +48,7 @@ update action model =
 view : Address Action -> Model -> Html
 view address model =
   let
-    active = \i -> if i == model.activeIndex then " active" else ""
+    active = \i -> if i == model.active then " active" else ""
     item = \i p -> div [ onClick address (SetActive i)
                        , class ("item" ++ active i)
                        ] [ text p.caption ]

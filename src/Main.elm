@@ -1,6 +1,8 @@
 module Main where
 
 import Header
+import PageOne
+import PageTwo
 import Html        exposing (Html, div, span, button, text)
 import Html.Events exposing (onClick)
 import Signal      exposing (Address)
@@ -21,6 +23,7 @@ app = start
 main =
   app.html
 
+
 -- MODEL
 
 
@@ -37,6 +40,7 @@ init =
   , Effects.none
   )
 
+
 -- ACTION
 
 
@@ -52,6 +56,9 @@ view : Address Action -> Model -> Html
 view address model =
   div []
     [ Header.view (Signal.forwardTo address Header) model.header
+    , case model.header.active of
+      1 -> PageTwo.view
+      _ -> PageOne.view
     , button [ onClick address Decrement ] [ text "-" ]
     , span [] [ text (toString model.count) ]
     , button [ onClick address Increment ] [ text "+" ]
