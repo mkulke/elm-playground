@@ -28,17 +28,25 @@ main =
 
 
 type alias Model =
-  { header : Header.Model
-  , count  : Int
+  { header  : Header.Model
+  , pageOne : PageOne.Model
+  , count   : Int
   }
 
 
 init : (Model, Effects Action)
 init =
-  ( Model (Header.Model [{ caption = "Page 1" }
-                      ,{ caption = "Page Deux" }] 1) 10
-  , Effects.none
-  )
+  let
+    pages =
+      [{ caption = "Page 1" }
+      ,{ caption = "Page 2" }
+      ]
+    header = Header.Model pages 0
+    pageOne = PageOne.Model "Page 1" -- TODO: refactor
+   in
+    ( Model header pageOne 10
+    , Effects.none
+    )
 
 
 -- ACTION
@@ -47,6 +55,7 @@ init =
 type Action = Increment
             | Decrement
             | Header Header.Action
+            | PageOne PageOne.Action
 
 
 -- VIEW
@@ -58,7 +67,7 @@ view address model =
     [ Header.view (Signal.forwardTo address Header) model.header
     , case model.header.active of
       1 -> PageTwo.view
-      _ -> PageOne.view
+      _ -> PageOne.view (Signal.forwardTo address PageOne) model.pageOne
     , button [ onClick address Decrement ] [ text "-" ]
     , span [] [ text (toString model.count) ]
     , button [ onClick address Increment ] [ text "+" ]
@@ -73,4 +82,5 @@ update action model =
   case action of
     Increment -> ({ model | count = model.count + 1 }, Effects.none)
     Decrement -> ({ model | count = model.count - 1 }, Effects.none)
-    Header headerAction -> ({ model | header = Header.update headerAction model.header }, Effects.none)
+    Header act -> ({ model | header = Header.update act model.header }, Effects.none)
+    PageOne act -> ({ model | pageOne = PageOne.update act model.pageOne }, Effects.none)

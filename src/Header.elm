@@ -13,7 +13,7 @@ type alias Page = { caption : String }
 
 
 type alias Model =
-  { pages       : List Page
+  { pages  : List Page
   , active : Int
   }
 
