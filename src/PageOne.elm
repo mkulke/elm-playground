@@ -1,9 +1,9 @@
-module PageOne (Model, Action, update, view) where
+module PageOne (Model, Action, update, view, Context) where
 
 import Signal          exposing (..)
 import Html            exposing (Html, div, input, text)
 import Html.Attributes exposing (type', class, value)
-import Html.Events     exposing (onClick, onKeyPress)
+import Html.Events     exposing (on, targetValue)
 
 
 -- MODEL
@@ -17,10 +17,17 @@ init : String -> Model
 init pagename =
   Model pagename
 
+
 -- ACTION
 
 
 type Action = ChangeCaption String
+
+
+type alias Context =
+  { actions    : Signal.Address Action
+  , setCaption : Signal.Address String
+  }
 
 
 -- UPDATE
@@ -35,9 +42,13 @@ update action model =
 -- VIEW
 
 
-view : Address Action -> Model -> Html
-view address model =
-  div [ class "page" ] [ input [ type' "text"
-                               , onKeyPress address (\k -> ChangeCaption "testo")
-                               , value model.pagename
-                               ] [] ]
+view : Context -> Model -> Html
+view context model =
+  let inputHandler = Signal.message context.setCaption
+      caption = input [ type' "text"
+                      , on "input" targetValue inputHandler
+                      , value model.pagename
+                      ] []
+  in
+    div [ class "page" ] [ caption ]
+
