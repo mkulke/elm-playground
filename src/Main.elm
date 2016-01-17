@@ -30,21 +30,20 @@ main =
 type alias Model =
   { header  : Header.Model
   , pageOne : PageOne.Model
-  , count   : Int
   }
 
 
 init : (Model, Effects Action)
 init =
   let
-    pageOne = PageOne.Model "Page 1"
+    pageOne = PageOne.init "Page 1"
     pages =
       [{ caption = pageOne.pagename }
       ,{ caption = "Page 2" }
       ]
     header = Header.Model pages 0
   in
-    ( Model header pageOne 10
+    ( Model header pageOne
     , Effects.none
     )
 
@@ -52,9 +51,7 @@ init =
 -- ACTION
 
 
-type Action = Increment
-            | Decrement
-            | Header Header.Action
+type Action = Header Header.Action
             | SetPageCaption String
             | PageOne PageOne.Action
 
@@ -74,9 +71,6 @@ view address model =
       , case model.header.active of
         1 -> PageTwo.view
         _ -> PageOne.view context model.pageOne
-      , button [ onClick address Decrement ] [ text "-" ]
-      , span [] [ text (toString model.count) ]
-      , button [ onClick address Increment ] [ text "+" ]
       ]
 
 
@@ -91,8 +85,6 @@ update action model =
       newPages caption = List.indexedMap (setCaptionOnFirst caption) header.pages
   in
     case action of
-      Increment -> ({ model | count = model.count + 1 }, Effects.none)
-      Decrement -> ({ model | count = model.count - 1 }, Effects.none)
       Header act -> ({ model | header = Header.update act model.header }, Effects.none)
       PageOne act -> ({ model | pageOne = PageOne.update act model.pageOne }, Effects.none)
       SetPageCaption caption -> ({ model
