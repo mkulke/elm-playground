@@ -85,9 +85,10 @@ view address model =
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
-  let newHeader caption = Header.Model [ { caption = caption }
-                                       , { caption = "Page 2" }
-                                       ] model.header.active
+  let pageOne = model.pageOne
+      header = model.header
+      setCaptionOnFirst caption i page = if i == 0 then { page | caption = caption } else page
+      newPages caption = List.indexedMap (setCaptionOnFirst caption) header.pages
   in
     case action of
       Increment -> ({ model | count = model.count + 1 }, Effects.none)
@@ -95,6 +96,6 @@ update action model =
       Header act -> ({ model | header = Header.update act model.header }, Effects.none)
       PageOne act -> ({ model | pageOne = PageOne.update act model.pageOne }, Effects.none)
       SetPageCaption caption -> ({ model
-                                 | header = newHeader caption
-                                 , pageOne = PageOne.Model caption
+                                 | header = { header | pages = newPages caption }
+                                 , pageOne = { pageOne | pagename = caption }
                                  }, Effects.none)
