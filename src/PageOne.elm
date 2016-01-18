@@ -1,34 +1,39 @@
 module PageOne (Model, Action, init, update, view, Context) where
 
+import BufferedInput
 import Signal          exposing (..)
 import Html            exposing (Html, div, input, text, strong)
 import Html.Attributes exposing (type', class, value, style)
 import Html.Events     exposing (on, onClick, targetValue)
+import Maybe
 
 
 -- MODEL
+
 
 type Color = Green
            | Blue
            | Purple
            | Red
 
+
 type alias Model =
-  { pagename : String
-  , name     : String
-  , color    : Color
+  { pagename     : String
+  , bufferedName : BufferedInput.Model
+  , color        : Color
   }
 
 
 init : String -> Model
 init pagename =
-  Model pagename "francis" Red
+  Model pagename (BufferedInput.init "foo" "francis") Red
 
 
 -- ACTION
 
 
 type Action = SetColor Color
+            | BufferedInput BufferedInput.Action
 
 
 type alias Context =
@@ -44,6 +49,7 @@ update : Action -> Model -> Model
 update action model =
   case action of
     SetColor color -> { model | color = color }
+    BufferedInput act -> { model | bufferedName = BufferedInput.update act model.bufferedName }
 
 
 -- VIEW
@@ -51,11 +57,11 @@ update action model =
 
 view : Context -> Model -> Html
 view context model =
-  let inputHandler = Signal.message context.setCaption
-      caption = input [ type' "text"
-                      , on "input" targetValue inputHandler
-                      , value model.pagename
-                      ] []
+  let captionInputHandler = Signal.message context.setCaption
+      captionInput = input [ type' "text"
+                           , on "input" targetValue captionInputHandler
+                           , value model.pagename
+                           ] []
       colorCode color = case color of
         Green -> "#859900"
         Blue -> "#268bd2"
@@ -63,7 +69,7 @@ view context model =
         Red -> "#dc322f"
       name = div [ class "text" ]
         [ text "Hello from "
-        , strong [ style [ ("color", colorCode model.color) ] ] [ text model.name ]
+        , strong [ style [ ("color", colorCode model.color) ] ] [ text model.bufferedName.value ]
         ]
       colorTile color = div [ class "tile"
                             , style [ ("background-color", colorCode color) ]
@@ -71,10 +77,11 @@ view context model =
                             ] []
       tiles = List.map colorTile [ Green, Blue, Purple, Red ]
       colorTiles = div [ class "tile-wrapper" ] tiles
+      nameInput = BufferedInput.view (Signal.forwardTo context.actions BufferedInput) model.bufferedName
   in
     div [ class "page" ]
-      [ caption
+      [ captionInput
       , name
       , colorTiles
+      , nameInput
       ]
-
