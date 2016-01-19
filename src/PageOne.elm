@@ -8,6 +8,7 @@ import Html.Events     exposing (on, onClick, targetValue)
 import Result
 import String
 import Maybe
+import Effects         exposing (Effects)
 
 
 -- MODEL
@@ -45,9 +46,9 @@ type alias Model =
   }
 
 
-init : String -> Model
+init : String -> (Model, Effects Action)
 init pagename =
-  Model pagename (BufferedInput.init "foo" "francis") Red 3
+  (Model pagename (BufferedInput.init "foo" "francis") Red 3, Effects.none)
 
 
 -- ACTION
@@ -68,13 +69,13 @@ type alias Context =
 -- UPDATE
 
 
-update : Action -> Model -> Model
+update : Action -> Model -> (Model, Effects Action)
 update action model =
   case action of
-    SetColor color -> { model | color = color }
-    SetFetchNo fetchNo -> { model | fetchNo = fetchNo }
-    BufferedInput act -> { model | bufferedName = BufferedInput.update act model.bufferedName }
-    Noop -> model
+    SetColor color -> ({ model | color = color }, Effects.none)
+    SetFetchNo fetchNo -> ({ model | fetchNo = fetchNo }, Effects.none)
+    BufferedInput act -> ({ model | bufferedName = BufferedInput.update act model.bufferedName }, Effects.none)
+    Noop -> (model, Effects.none)
 
 
 -- VIEW

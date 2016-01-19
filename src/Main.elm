@@ -20,7 +20,7 @@ app = start
   , inputs = []
   }
 
- 
+
 main =
   app.html
 
@@ -37,7 +37,7 @@ type alias Model =
 init : (Model, Effects Action)
 init =
   let
-    pageOne = PageOne.init "Page 1"
+    pageOne = fst (PageOne.init "Page 1")
     pages =
       [{ caption = pageOne.pagename }
       ,{ caption = "Page 2" }
@@ -87,7 +87,7 @@ update action model =
   in
     case action of
       Header act -> ({ model | header = Header.update act model.header }, Effects.none)
-      PageOne act -> ({ model | pageOne = PageOne.update act model.pageOne }, Effects.none)
+      PageOne act -> ({ model | pageOne = fst (PageOne.update act model.pageOne) }, Effects.none)
       SetPageCaption caption -> ({ model
                                  | header = { header | pages = newPages caption }
                                  , pageOne = { pageOne | pagename = caption }
