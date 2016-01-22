@@ -8,6 +8,7 @@ import Html.Events exposing (onClick)
 import Signal      exposing (Address)
 import Effects     exposing (Effects, Never)
 import StartApp    exposing (start)
+import Task
 
 
 -- MAIN
@@ -23,6 +24,11 @@ app = start
 
 main =
   app.html
+
+
+port tasks : Signal (Task.Task Never ())
+port tasks =
+  app.tasks
 
 
 -- MODEL
@@ -87,7 +93,10 @@ update action model =
   in
     case action of
       Header act -> ({ model | header = Header.update act model.header }, Effects.none)
-      PageOne act -> ({ model | pageOne = fst (PageOne.update act model.pageOne) }, Effects.none)
+      PageOne act ->
+        let (pageOne, effect) = PageOne.update act model.pageOne
+        in
+          ({ model | pageOne = pageOne }, Effects.map PageOne effect)
       SetPageCaption caption -> ({ model
                                  | header = { header | pages = newPages caption }
                                  , pageOne = { pageOne | pagename = caption }

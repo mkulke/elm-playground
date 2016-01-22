@@ -1,14 +1,17 @@
 module PageOne (Model, Action, init, update, view, Context) where
 
 import BufferedInput
-import Signal          exposing (..)
-import Html            exposing (Html, div, span, input, text, strong)
-import Html.Attributes exposing (type', disabled, min, max, class, value, style)
-import Html.Events     exposing (on, onClick, targetValue)
+import Signal              exposing (..)
+import Html                exposing (Html, div, span, input, text, strong)
+import Html.Attributes     exposing (type', disabled, min, max, class, value, style)
+import Html.Events         exposing (on, onClick, targetValue)
 import Result
 import String
 import Maybe
-import Effects         exposing (Effects)
+import Json.Decode as Json exposing ((:=))
+import Effects             exposing (Effects)
+import Task
+import Http
 
 
 -- MODEL
@@ -18,6 +21,16 @@ type Color = Green
            | Blue
            | Purple
            | Red
+
+
+decodeName : Json.Decoder String
+decodeName =
+  "name" := Json.string
+
+
+userUrl : Int -> String
+userUrl fetchNo =
+  "http://jsonplaceholder.typicode.com/users/" ++ toString fetchNo
 
 
 toValidFetchNo : Int -> Result String Int
@@ -32,10 +45,10 @@ toFetchNo string =
 
 colorCode : Color -> String
 colorCode color = case color of
-  Green -> "#859900"
-  Blue -> "#268bd2"
+  Green  -> "#859900"
+  Blue   -> "#268bd2"
   Purple -> "#6c71c4"
-  Red -> "#dc322f"
+  Red    -> "#dc322f"
 
 
 type alias Model =
@@ -43,12 +56,24 @@ type alias Model =
   , bufferedName : BufferedInput.Model
   , color        : Color
   , fetchNo      : Int
+  , isFetching   : Bool
   }
 
 
 init : String -> (Model, Effects Action)
 init pagename =
-  (Model pagename (BufferedInput.init "foo" "francis") Red 3, Effects.none)
+  (Model pagename (BufferedInput.init "foo" "francis") Red 3 False, Effects.none)
+
+
+-- EFFECTS
+
+
+getName : Int -> Effects Action
+getName no =
+  Http.get decodeName (userUrl no)
+    |> Task.toMaybe
+    |> Task.map NewUser
+    |> Effects.task
 
 
 -- ACTION
@@ -57,6 +82,8 @@ init pagename =
 type Action = SetColor Color
             | SetFetchNo Int
             | BufferedInput BufferedInput.Action
+            | NewUser (Maybe String)
+            | RequestUser
             | Noop
 
 
@@ -71,11 +98,19 @@ type alias Context =
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
-  case action of
-    SetColor color -> ({ model | color = color }, Effects.none)
-    SetFetchNo fetchNo -> ({ model | fetchNo = fetchNo }, Effects.none)
-    BufferedInput act -> ({ model | bufferedName = BufferedInput.update act model.bufferedName }, Effects.none)
-    Noop -> (model, Effects.none)
+  let bufferedName = model.bufferedName
+      name maybeName = { bufferedName | value = Maybe.withDefault bufferedName.value maybeName }
+      updateBufferedName act = BufferedInput.update act bufferedName
+  in
+    case action of
+      SetColor color -> ({ model | color = color }, Effects.none)
+      SetFetchNo fetchNo -> ({ model | fetchNo = fetchNo }, Effects.none)
+      BufferedInput act -> ({ model | bufferedName = updateBufferedName act }, Effects.none)
+      NewUser maybeName -> ({model | bufferedName = name maybeName
+                                   , isFetching = False
+                                   }, Effects.none)
+      RequestUser -> ({ model | isFetching = True }, getName model.fetchNo)
+      Noop -> (model, Effects.none)
 
 
 -- VIEW
@@ -108,13 +143,14 @@ view context model =
                                , on "input" targetValue idInputHandler
                                , Html.Attributes.min "1"
                                , Html.Attributes.max "11"
-                               -- , value (toString model.fetchNo)
+                               , value (toString model.fetchNo)
                                , model.fetchNo |> toString |> value
                                ] []
                        , span [] [ text " " ]
                        , input [ type' "button"
                                , value "Fetch"
-                               , disabled True
+                               , disabled model.isFetching
+                               , onClick context.actions RequestUser
                                ] []
                        ]
   in
