@@ -1,14 +1,12 @@
 module Main where
 
-import Header
-import PageOne
-import PageTwo
-import Html        exposing (Html, div, span, button, text)
-import Html.Events exposing (onClick)
-import Signal      exposing (Address)
-import Effects     exposing (Effects, Never)
-import StartApp    exposing (start)
+import Html                exposing (Html, text, p)
+import Signal              exposing (Address)
+import Effects             exposing (Effects, Never)
+import Json.Decode as Json exposing ((:=))
+import StartApp            exposing (start)
 import Task
+import Http
 
 
 -- MAIN
@@ -34,33 +32,38 @@ port tasks =
 -- MODEL
 
 
-type alias Model =
-  { header  : Header.Model
-  , pageOne : PageOne.Model
-  }
+type alias Model = String
 
 
 init : (Model, Effects Action)
 init =
-  let
-    pageOne = fst (PageOne.init "Page 1")
-    pages =
-      [{ caption = pageOne.pagename }
-      ,{ caption = "Page 2" }
-      ]
-    header = Header.Model pages 0
-  in
-    ( Model header pageOne
-    , Effects.none
-    )
+  ("...", getName)
+
+
+decodeName : Json.Decoder String
+decodeName =
+  "name" := Json.string
+
+
+userUrl : String
+userUrl = "http://jsonplaceholder.typicode.com/users/1"
 
 
 -- ACTION
 
 
-type Action = Header Header.Action
-            | SetPageCaption String
-            | PageOne PageOne.Action
+type Action = NewUser (Maybe String)
+
+
+-- EFFECTS
+
+
+getName : Effects Action
+getName =
+  Http.get decodeName userUrl
+    |> Task.toMaybe
+    |> Task.map NewUser
+    |> Effects.task
 
 
 -- VIEW
@@ -68,17 +71,7 @@ type Action = Header Header.Action
 
 view : Address Action -> Model -> Html
 view address model =
-  let context =
-        PageOne.Context
-          (Signal.forwardTo address PageOne)
-          (Signal.forwardTo address SetPageCaption)
-  in
-    div []
-      [ Header.view (Signal.forwardTo address Header) model.header
-      , case model.header.active of
-        1 -> PageTwo.view
-        _ -> PageOne.view context model.pageOne
-      ]
+  p [] [ text model ]
 
 
 -- UPDATE
@@ -86,18 +79,7 @@ view address model =
 
 update : Action -> Model -> (Model, Effects Action)
 update action model =
-  let pageOne = model.pageOne
-      header = model.header
-      setCaptionOnFirst caption i page = if i == 0 then { page | caption = caption } else page
-      newPages caption = List.indexedMap (setCaptionOnFirst caption) header.pages
+  let name maybeName = Maybe.withDefault "error" maybeName
   in
     case action of
-      Header act -> ({ model | header = Header.update act model.header }, Effects.none)
-      PageOne act ->
-        let (pageOne, effect) = PageOne.update act model.pageOne
-        in
-          ({ model | pageOne = pageOne }, Effects.map PageOne effect)
-      SetPageCaption caption -> ({ model
-                                 | header = { header | pages = newPages caption }
-                                 , pageOne = { pageOne | pagename = caption }
-                                 }, Effects.none)
+      NewUser maybeName -> (name maybeName, Effects.none)
