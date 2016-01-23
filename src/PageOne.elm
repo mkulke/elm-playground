@@ -17,6 +17,15 @@ import Http
 -- MODEL
 
 
+type alias Model =
+  { pagename     : String
+  , bufferedName : BufferedInput.Model
+  , color        : Color
+  , fetchNo      : Int
+  , isFetching   : Bool
+  }
+
+
 type Color = Green
            | Blue
            | Purple
@@ -49,15 +58,6 @@ colorCode color = case color of
   Blue   -> "#268bd2"
   Purple -> "#6c71c4"
   Red    -> "#dc322f"
-
-
-type alias Model =
-  { pagename     : String
-  , bufferedName : BufferedInput.Model
-  , color        : Color
-  , fetchNo      : Int
-  , isFetching   : Bool
-  }
 
 
 init : String -> (Model, Effects Action)
@@ -99,14 +99,18 @@ type alias Context =
 update : Action -> Model -> (Model, Effects Action)
 update action model =
   let bufferedName = model.bufferedName
-      name maybeName = { bufferedName | value = Maybe.withDefault bufferedName.value maybeName }
+      firstName maybeName = maybeName
+        |> Maybe.withDefault bufferedName.value
+        |> String.split " "
+        |> List.head
+        |> Maybe.withDefault ""
       updateBufferedName act = BufferedInput.update act bufferedName
   in
     case action of
       SetColor color -> ({ model | color = color }, Effects.none)
       SetFetchNo fetchNo -> ({ model | fetchNo = fetchNo }, Effects.none)
       BufferedInput act -> ({ model | bufferedName = updateBufferedName act }, Effects.none)
-      NewUser maybeName -> ({model | bufferedName = name maybeName
+      NewUser maybeName -> ({model | bufferedName = { bufferedName | value = firstName maybeName }
                                    , isFetching = False
                                    }, Effects.none)
       RequestUser -> ({ model | isFetching = True }, getName model.fetchNo)
@@ -116,48 +120,66 @@ update action model =
 -- VIEW
 
 
-view : Context -> Model -> Html
-view context model =
-  let captionInputHandler = Signal.message context.setCaption
-      captionInput = input [ type' "text"
-                           , on "input" targetValue captionInputHandler
-                           , value model.pagename
-                           ] []
-      name = div [ class "text" ]
-        [ text "Hello from "
-        , strong [ style [ ("color", colorCode model.color) ] ] [ text model.bufferedName.value ]
-        ]
-      colorTile color = div [ class "tile"
-                            , style [ ("background-color", colorCode color) ]
-                            , onClick context.actions (SetColor color)
-                            ] []
-      tiles = List.map colorTile [ Green, Blue, Purple, Red ]
-      colorTiles = div [ class "tile-wrapper" ] tiles
-      nameInput = BufferedInput.view (Signal.forwardTo context.actions BufferedInput) model.bufferedName
-      idAction input = case toFetchNo input of
+captionInput : Address String -> String -> Html
+captionInput address value' =
+  let captionInputHandler = Signal.message address
+  in
+    input [ type' "text"
+          , on "input" targetValue captionInputHandler
+          , value value'
+          ] []
+
+
+fetchRow : Address Action -> Int -> Bool -> Html
+fetchRow address fetchNo isFetching =
+  let idAction input = case toFetchNo input of
                          Err e -> Noop
                          Ok i -> SetFetchNo i
-      idInputHandler input = Signal.message context.actions (idAction input)
-      idInput = div [] [ span [] [ text "Id: " ]
-                       , input [ type' "number"
-                               , on "input" targetValue idInputHandler
-                               , Html.Attributes.min "1"
-                               , Html.Attributes.max "11"
-                               , value (toString model.fetchNo)
-                               , model.fetchNo |> toString |> value
-                               ] []
-                       , span [] [ text " " ]
-                       , input [ type' "button"
-                               , value "Fetch"
-                               , disabled model.isFetching
-                               , onClick context.actions RequestUser
-                               ] []
-                       ]
+      idInputHandler input = Signal.message address (idAction input)
+  in
+    div [] [ span [] [ text "Id: " ]
+                     , input [ type' "number"
+                             , on "input" targetValue idInputHandler
+                             , Html.Attributes.min "1"
+                             , Html.Attributes.max "11"
+                             , value (toString fetchNo)
+                             , fetchNo |> toString |> value
+                             ] []
+                     , span [] [ text " " ]
+                     , input [ type' "button"
+                             , value "Fetch"
+                             , disabled isFetching
+                             , onClick address RequestUser
+                             ] []
+                     ]
+
+
+colorTiles : Address Action -> Html
+colorTiles address =
+  let colorTile color = div [ class "tile"
+                            , style [ ("background-color", colorCode color) ]
+                            , onClick address (SetColor color)
+                            ] []
+      tiles = List.map colorTile [ Green, Blue, Purple, Red ]
+  in
+    div [ class "tile-wrapper" ] tiles
+
+
+name : Color -> String -> Html
+name color text' = div [ class "text" ]
+     [ text "Hello from "
+     , strong [ style [ ("color", colorCode color) ] ] [ text text' ]
+     ]
+
+
+view : Context -> Model -> Html
+view context model =
+  let nameInput = BufferedInput.view (Signal.forwardTo context.actions BufferedInput) model.bufferedName
   in
     div [ class "page" ]
-      [ captionInput
-      , name
-      , colorTiles
+      [ captionInput context.setCaption model.pagename
+      , name model.color model.bufferedName.value
+      , colorTiles context.actions
       , nameInput
-      , idInput
+      , fetchRow context.actions model.fetchNo model.isFetching
       ]
