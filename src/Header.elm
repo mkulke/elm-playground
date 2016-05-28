@@ -1,6 +1,5 @@
-module Header (Model, Action, update, view) where
+module Header exposing (Model, Msg, update, view)
 
-import Signal          exposing (..)
 import Html            exposing (Html, div, text)
 import Html.Attributes exposing (class)
 import Html.Events     exposing (onClick)
@@ -23,33 +22,33 @@ init pages index =
   Model pages index
 
 
--- ACTION
+-- MSG
 
 
-type Action = SetActive Int
+type Msg = SetActive Int
 
 
 -- UPDATE
 
 
-update : Action -> Model -> Model
-update action model =
+update : Msg -> Model -> Model
+update msg model =
   let
     sanitize = \index ->
       if List.length model.pages > index && index >= 0 then index else 0
   in
-    case action of
+    case msg of
       SetActive index -> { model | active = (sanitize index) }
 
 
 -- VIEW
 
 
-view : Address Action -> Model -> Html
-view address model =
+view : Model -> Html Msg
+view model =
   let
     active = \i -> if i == model.active then " active" else ""
-    item = \i p -> div [ onClick address (SetActive i)
+    item = \i p -> div [ onClick (SetActive i)
                        , class ("item" ++ active i)
                        ] [ text p.caption ]
     items = List.indexedMap item model.pages

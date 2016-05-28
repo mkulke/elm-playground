@@ -13,7 +13,7 @@ chokidar.watch(source_paths, {ignored: /[\/\\]\./, ignoreInitial: true}).on('all
     process.stdout.write('\u001B[2J\u001B[0;0f');
 
     // run the Elm compiler
-    exec("elm-make src/Main.elm --output=public/main.js --yes", function(err, stdout, stderr){
+    exec("elm-make src/Main.elm --warn --output=public/main.js --yes", function(err, stdout, stderr){
         if (err) console.log(stderr);
         else console.log(stdout);
     });
