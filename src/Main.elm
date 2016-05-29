@@ -81,7 +81,6 @@ view model =
 
 -- UPDATE
 
-
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   let pageOne = model.pageOne
@@ -91,12 +90,17 @@ update msg model =
   in
     case msg of
       Header msg' -> ({ model | header = Header.update msg' model.header }, Cmd.none)
-      PageOne msg' -> case msg' of
-        PageOne.SetCaption caption -> ({ model
-                                       | header = { header | pages = newPages caption }
-                                       , pageOne = { pageOne | pagename = caption }
-                                       }, Cmd.none)
-        _ -> ({model | pageOne = PageOne.update msg' model.pageOne}, Cmd.none)
+      PageOne msg' ->
+        -- We handle PageOne msg in a special way, since msg's from that module will effect
+        -- the Header model as well.
+        let updatedModel = PageOne.update msg' model.pageOne
+        in
+          case msg' of
+            PageOne.SetCaption caption -> ({ model
+                                           | pageOne = updatedModel
+                                           , header = { header | pages = newPages caption }
+                                           }, Cmd.none)
+            _ -> ({model | pageOne = updatedModel}, Cmd.none)
       -- PageOne act ->
       --   let (pageOne, effect) = PageOne.update act model.pageOne
       --   in
