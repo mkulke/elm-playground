@@ -1,14 +1,11 @@
-module PageTwo (view) where
+module PageTwo exposing (view)
 
-import Signal          exposing (..)
 import Html            exposing (Html, div, h2, text)
 import Html.Attributes exposing (class)
-import Html.Events     exposing (onClick)
 
 
 -- VIEW
 
-
-view : Html
+view : Html msg
 view =
   div [ class "page" ] [ h2 [] [ text "Page II" ] ]

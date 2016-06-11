@@ -1,6 +1,6 @@
-module BufferedInput (Model, Action, init, update, view) where
+module BufferedInput exposing (Model, Msg, init, update, view)
 
-import Signal          exposing (..)
+import Json.Decode as Json
 import Html            exposing (Html, input)
 import Html.Attributes exposing (type', value)
 import Html.Events     exposing (on, targetValue, keyCode)
@@ -22,25 +22,25 @@ init buffer value =
   Model buffer value
 
 
--- ACTION
+-- MSG
 
 
-type Action = SetBuffer String
-            | SetValue String
-            | Noop
+type Msg = SetBuffer String
+         | SetValue String
+         | Noop
 
 
 
 -- UPDATE
 
 
-update : Action -> Model -> Model
-update action model =
+update : Msg -> Model -> Model
+update msg model =
   let capitalize = \t -> case uncons t of
         Nothing -> ""
         Just (h, t) -> cons (toUpper h) t
   in
-    case action of
+    case msg of
       SetBuffer buffer -> { model | buffer = buffer }
       SetValue value -> { model | value = capitalize value }
       Noop -> model
@@ -49,13 +49,11 @@ update action model =
 -- VIEW
 
 
-view : Address Action -> Model -> Html
-view address model =
-  let bufferHandler = Signal.message address << SetBuffer
-      isEnter code = if code == 13 then SetValue model.buffer else Noop
-      confirmHandler = Signal.message address << isEnter
+view : Model -> Html Msg
+view model =
+  let confirmHandler code = if code == 13 then SetValue model.buffer else Noop
   in input [ type' "text"
-           , on "input" targetValue bufferHandler
-           , on "keyup" keyCode confirmHandler
+           , on "input" (Json.map SetBuffer targetValue)
+           , on "keyup" (Json.map confirmHandler keyCode)
            , value model.buffer
            ] []

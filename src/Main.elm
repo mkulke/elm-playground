@@ -1,34 +1,21 @@
-module Main where
+module Main exposing (..)
 
 import Header
 import PageOne
 import PageTwo
 import Html        exposing (Html, div, span, button, text)
-import Html.Events exposing (onClick)
-import Signal      exposing (Address)
-import Effects     exposing (Effects, Never)
-import StartApp    exposing (start)
-import Task
+import Html.App as Html
 
 
 -- MAIN
 
 
-app = start
+main = Html.program
   { init  = init
   , update = update
   , view   = view
-  , inputs = []
+  , subscriptions = \_ -> Sub.none
   }
-
-
-main =
-  app.html
-
-
-port tasks : Signal (Task.Task Never ())
-port tasks =
-  app.tasks
 
 
 -- MODEL
@@ -40,7 +27,7 @@ type alias Model =
   }
 
 
-init : (Model, Effects Action)
+init : (Model, Cmd Msg)
 init =
   let
     pageOne = fst (PageOne.init "Page 1")
@@ -51,53 +38,50 @@ init =
     header = Header.Model pages 0
   in
     ( Model header pageOne
-    , Effects.none
+    , Cmd.none
     )
 
 
--- ACTION
+-- MSG
 
 
-type Action = Header Header.Action
-            | SetPageCaption String
-            | PageOne PageOne.Action
+type Msg = Header Header.Msg
+         | PageOne PageOne.Msg
 
 
 -- VIEW
 
 
-view : Address Action -> Model -> Html
-view address model =
-  let context =
-        PageOne.Context
-          (Signal.forwardTo address PageOne)
-          (Signal.forwardTo address SetPageCaption)
-  in
-    div []
-      [ Header.view (Signal.forwardTo address Header) model.header
-      , case model.header.active of
-        1 -> PageTwo.view
-        _ -> PageOne.view context model.pageOne
-      ]
+view : Model -> Html Msg
+view model =
+  div []
+    [ Html.map Header (Header.view model.header)
+    , case model.header.active of
+      1 -> PageTwo.view
+      _ -> Html.map PageOne (PageOne.view model.pageOne)
+    ]
 
 
 -- UPDATE
 
 
-update : Action -> Model -> (Model, Effects Action)
-update action model =
+update : Msg -> Model -> (Model, Cmd Msg)
+update msg model =
   let pageOne = model.pageOne
       header = model.header
       setCaptionOnFirst caption i page = if i == 0 then { page | caption = caption } else page
       newPages caption = List.indexedMap (setCaptionOnFirst caption) header.pages
   in
-    case action of
-      Header act -> ({ model | header = Header.update act model.header }, Effects.none)
-      PageOne act ->
-        let (pageOne, effect) = PageOne.update act model.pageOne
+    case msg of
+      Header msg' -> ({ model | header = Header.update msg' model.header }, Cmd.none)
+      PageOne msg' ->
+        -- We handle PageOne msg in a special way, since msg's from that module will effect
+        -- the Header model as well.
+        let (updatedModel, cmd') = PageOne.update msg' model.pageOne
         in
-          ({ model | pageOne = pageOne }, Effects.map PageOne effect)
-      SetPageCaption caption -> ({ model
-                                 | header = { header | pages = newPages caption }
-                                 , pageOne = { pageOne | pagename = caption }
-                                 }, Effects.none)
+          case msg' of
+            PageOne.SetCaption caption -> ({ model
+                                           | pageOne = updatedModel
+                                           , header = { header | pages = newPages caption }
+                                           }, Cmd.none)
+            _ -> ({ model | pageOne = updatedModel }, Cmd.map PageOne cmd')
