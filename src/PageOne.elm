@@ -8,9 +8,9 @@ import Result
 import String
 import Maybe
 import Json.Decode as Json exposing ((:=))
--- import Effects             exposing (Effects)
--- import Task
--- import Http
+import Html.App as Html
+import Task
+import Http
 
 
 -- MODEL
@@ -67,13 +67,9 @@ init pagename =
 -- EFFECTS
 
 
--- getName : Int -> Effects Action
--- getName no =
---   userUrl no
---     |> Http.get decodeName
---     |> Task.toMaybe
---     |> Task.map NewUser
---     |> Effects.task
+getName : Int -> Cmd Msg
+getName no =
+  userUrl no |> Http.get decodeName |> Task.perform FailUser NewUser
 
 
 -- MSG
@@ -82,83 +78,68 @@ init pagename =
 type Msg = SetColor Color
          | SetFetchNo Int
          | BufferedInput BufferedInput.Msg
-         | NewUser (Maybe String)
+         | NewUser String
+         | FailUser Http.Error
          | SetCaption String
          | RequestUser
-         | Noop
-
-
--- type alias Context =
---   { actions    : Msg
---   , setCaption : String
---   }
 
 
 -- UPDATE
 
-update : Msg -> Model -> Model
+
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
-  case msg of
-    SetColor color -> { model | color = color}
-    _ -> model
--- update : Action -> Model -> (Model, Effects Action)
--- update action model =
---   let bufferedName = model.bufferedName
---       firstName maybeName = maybeName
---         |> Maybe.withDefault bufferedName.value
---         |> String.split " "
---         |> List.head
---         |> Maybe.withDefault ""
---       updateBufferedName act = BufferedInput.update act bufferedName
---   in
---     case action of
---       SetColor color -> ({ model | color = color }, Effects.none)
---       SetFetchNo fetchNo -> ({ model | fetchNo = fetchNo }, Effects.none)
---       BufferedInput act -> ({ model | bufferedName = updateBufferedName act }, Effects.none)
---       NewUser maybeName -> ({model | bufferedName = { bufferedName | value = firstName maybeName }
---                                    , isFetching = False
---                                    }, Effects.none)
---       RequestUser -> ({ model | isFetching = True }, getName model.fetchNo)
---       Noop -> (model, Effects.none)
+  let bufferedName = model.bufferedName
+      firstName name = name
+        |> String.split " "
+        |> List.head
+        |> Maybe.withDefault ""
+      updateBufferedName act = BufferedInput.update act bufferedName
+  in
+    case msg of
+      SetColor color -> ({ model | color = color}, Cmd.none)
+      SetFetchNo fetchNo -> ({ model | fetchNo = fetchNo }, Cmd.none)
+      BufferedInput act ->
+        ({ model | bufferedName = updateBufferedName act }, Cmd.none)
+      RequestUser -> ({ model | isFetching = True }, getName model.fetchNo)
+      FailUser _ -> ({ model | isFetching = False }, Cmd.none)
+      NewUser name ->
+        let bufferedName = { bufferedName | value = firstName name }
+        in
+          ({ model | isFetching = False, bufferedName = bufferedName }, Cmd.none)
+      SetCaption pagename -> ({ model | pagename = pagename }, Cmd.none)
 
 
 -- VIEW
 
 
--- captionInput : Address String -> String -> Html
 captionInput : String -> Html Msg
 captionInput value' =
-  -- let captionInputHandler = Signal.message address
-  -- in
   input [ type' "text"
-        -- , on "input" targetValue captionInputHandler
         , on "input" (Json.map SetCaption targetValue)
         , value value'
         ] []
 
 
--- fetchRow : Address Action -> Int -> Bool -> Html
--- fetchRow address fetchNo isFetching =
---   let idAction input = case toFetchNo input of
---                          Err e -> Noop
---                          Ok i -> SetFetchNo i
---       idInputHandler input = Signal.message address (idAction input)
---   in
---     div [] [ span [] [ text "Id: " ]
---                      , input [ type' "number"
---                              , on "input" targetValue idInputHandler
---                              , Html.Attributes.min "1"
---                              , Html.Attributes.max "11"
---                              , value (toString fetchNo)
---                              , fetchNo |> toString |> value
---                              ] []
---                      , span [] [ text " " ]
---                      , input [ type' "button"
---                              , value "Fetch"
---                              , disabled isFetching
---                              , onClick address RequestUser
---                              ] []
---                      ]
+fetchRow : Int -> Bool -> Html Msg
+fetchRow fetchNo isFetching =
+  let inputMsg string = string |> String.toInt |> Result.withDefault 0 |> SetFetchNo
+  in
+    div [] [ span [] [ text "Id: " ]
+                     , input [ type' "number"
+                             , on "input" (Json.map inputMsg targetValue)
+                             , Html.Attributes.min "1"
+                             , Html.Attributes.max "11"
+                             , value (toString fetchNo)
+                             , fetchNo |> toString |> value
+                             ] []
+                     , span [] [ text " " ]
+                     , input [ type' "button"
+                             , value "Fetch"
+                             , disabled isFetching
+                             , onClick RequestUser
+                             ] []
+                     ]
 
 
 colorTiles : Html Msg
@@ -179,17 +160,14 @@ name color text' = div [ class "text" ]
      ]
 
 
--- view : Context -> Model -> Html
 view : Model -> Html Msg
 view model =
-  -- let nameInput = BufferedInput.view (Signal.forwardTo context.actions BufferedInput) model.bufferedName
-  -- let nameInput = map BufferedInput.view (Signal.forwardTo context.actions BufferedInput) model.bufferedName
-  -- in
-  div [ class "page" ]
-    [ captionInput model.pagename
-    , name model.color model.bufferedName.value
-    , colorTiles
-    -- , colorTiles context.actions
-    -- , nameInput
-    -- , fetchRow context.actions model.fetchNo model.isFetching
-    ]
+  let nameInput = Html.map BufferedInput (BufferedInput.view model.bufferedName)
+  in
+    div [ class "page" ]
+      [ captionInput model.pagename
+      , name model.color model.bufferedName.value
+      , colorTiles
+      , nameInput
+      , fetchRow model.fetchNo model.isFetching
+      ]

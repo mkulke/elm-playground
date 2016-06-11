@@ -4,10 +4,6 @@ import Header
 import PageOne
 import PageTwo
 import Html        exposing (Html, div, span, button, text)
--- import Html.Events exposing (onClick)
--- import Effects     exposing (Effects, Never)
--- import StartApp    exposing (start)
--- import Task
 import Html.App as Html
 
 
@@ -20,11 +16,6 @@ main = Html.program
   , view   = view
   , subscriptions = \_ -> Sub.none
   }
-
-
--- port tasks : Signal (Task.Task Never ())
--- port tasks =
---   app.tasks
 
 
 -- MODEL
@@ -51,12 +42,10 @@ init =
     )
 
 
--- ACTION
+-- MSG
 
 
 type Msg = Header Header.Msg
-         -- | SetPageCaption String PageOne.Msg
-         -- | PageOne PageOne.Action
          | PageOne PageOne.Msg
 
 
@@ -65,13 +54,7 @@ type Msg = Header Header.Msg
 
 view : Model -> Html Msg
 view model =
-  -- let context =
-  --       PageOne.Context
-  --         (Signal.forwardTo address PageOne)
-  --         (Signal.forwardTo address SetPageCaption)
-  -- in
   div []
-    -- [ Header.view (Signal.forwardTo address Header) model.header
     [ Html.map Header (Header.view model.header)
     , case model.header.active of
       1 -> PageTwo.view
@@ -80,6 +63,7 @@ view model =
 
 
 -- UPDATE
+
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -93,19 +77,11 @@ update msg model =
       PageOne msg' ->
         -- We handle PageOne msg in a special way, since msg's from that module will effect
         -- the Header model as well.
-        let updatedModel = PageOne.update msg' model.pageOne
+        let (updatedModel, cmd') = PageOne.update msg' model.pageOne
         in
           case msg' of
             PageOne.SetCaption caption -> ({ model
                                            | pageOne = updatedModel
                                            , header = { header | pages = newPages caption }
                                            }, Cmd.none)
-            _ -> ({model | pageOne = updatedModel}, Cmd.none)
-      -- PageOne act ->
-      --   let (pageOne, effect) = PageOne.update act model.pageOne
-      --   in
-      --     ({ model | pageOne = pageOne }, Effects.map PageOne effect)
-      -- SetPageCaption caption msg' -> ({ model
-      --                                | header = { header | pages = newPages caption }
-      --                                , pageOne = { pageOne | pagename = caption }
-      --                                }, Cmd.none)
+            _ -> ({ model | pageOne = updatedModel }, Cmd.map PageOne cmd')
