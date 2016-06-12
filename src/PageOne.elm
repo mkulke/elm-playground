@@ -97,17 +97,17 @@ update msg model =
       updateBufferedName act = BufferedInput.update act bufferedName
   in
     case msg of
-      SetColor color -> ({ model | color = color}, Cmd.none)
-      SetFetchNo fetchNo -> ({ model | fetchNo = fetchNo }, Cmd.none)
+      SetColor color -> { model | color = color} ! []
+      SetFetchNo fetchNo -> { model | fetchNo = fetchNo } ! []
       BufferedInput act ->
-        ({ model | bufferedName = updateBufferedName act }, Cmd.none)
-      RequestUser -> ({ model | isFetching = True }, getName model.fetchNo)
-      FailUser _ -> ({ model | isFetching = False }, Cmd.none)
+        { model | bufferedName = updateBufferedName act } ! []
+      RequestUser -> { model | isFetching = True } ! [getName model.fetchNo]
+      FailUser _ -> { model | isFetching = False } ! []
       NewUser name ->
         let bufferedName = { bufferedName | value = firstName name }
         in
-          ({ model | isFetching = False, bufferedName = bufferedName }, Cmd.none)
-      SetCaption pagename -> ({ model | pagename = pagename }, Cmd.none)
+          { model | isFetching = False, bufferedName = bufferedName } ! []
+      SetCaption pagename -> { model | pagename = pagename } ! []
 
 
 -- VIEW

@@ -37,9 +37,7 @@ init =
       ]
     header = Header.Model pages 0
   in
-    ( Model header pageOne
-    , Cmd.none
-    )
+    Model header pageOne ! []
 
 
 -- MSG
@@ -73,15 +71,15 @@ update msg model =
       newPages caption = List.indexedMap (setCaptionOnFirst caption) header.pages
   in
     case msg of
-      Header msg' -> ({ model | header = Header.update msg' model.header }, Cmd.none)
+      Header msg' -> { model | header = Header.update msg' model.header } ! []
       PageOne msg' ->
         -- We handle PageOne msg in a special way, since msg's from that module will effect
         -- the Header model as well.
         let (updatedModel, cmd') = PageOne.update msg' model.pageOne
         in
           case msg' of
-            PageOne.SetCaption caption -> ({ model
-                                           | pageOne = updatedModel
-                                           , header = { header | pages = newPages caption }
-                                           }, Cmd.none)
-            _ -> ({ model | pageOne = updatedModel }, Cmd.map PageOne cmd')
+            PageOne.SetCaption caption -> { model
+                                          | pageOne = updatedModel
+                                          , header = { header | pages = newPages caption }
+                                          } ! []
+            _ -> { model | pageOne = updatedModel } ! [Cmd.map PageOne cmd']
